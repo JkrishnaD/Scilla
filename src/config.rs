@@ -108,9 +108,7 @@ impl ScillaConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::env;
-    use tempfile::TempDir;
+    use {super::*, std::env, tempfile::TempDir};
 
     #[test]
     fn test_load_from_path_malformed_toml() {
