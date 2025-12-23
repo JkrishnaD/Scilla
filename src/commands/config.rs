@@ -69,7 +69,7 @@ impl ConfigField {
             ConfigField::RpcUrl,
             ConfigField::CommitmentLevel,
             ConfigField::KeypairPath,
-            ConfigField::GoBack,
+            ConfigField::None,
         ]
     }
 }
