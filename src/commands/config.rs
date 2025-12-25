@@ -5,9 +5,11 @@ use {
         error::ScillaResult,
         prompt::prompt_data,
     },
+    anyhow::Ok,
     comfy_table::{Cell, Table, presets::UTF8_FULL},
     console::style,
     inquire::{Confirm, Select},
+    serde::{Deserialize, Serialize},
     solana_commitment_config::CommitmentLevel,
     std::{fmt, fs, path::PathBuf},
 };
@@ -74,11 +76,27 @@ impl ConfigField {
     }
 }
 
-fn get_commitment_levels() -> Vec<CommitmentLevel> {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum CommitmentOptions {
+    Level(CommitmentLevel),
+    None,
+}
+
+impl fmt::Display for CommitmentOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CommitmentOptions::Level(level) => write!(f, "{:?}", level),
+            CommitmentOptions::None => write!(f, "None"),
+        }
+    }
+}
+
+fn get_commitment_levels() -> Vec<CommitmentOptions> {
     vec![
-        CommitmentLevel::Processed,
-        CommitmentLevel::Confirmed,
-        CommitmentLevel::Finalized,
+        CommitmentOptions::Level(CommitmentLevel::Processed),
+        CommitmentOptions::Level(CommitmentLevel::Confirmed),
+        CommitmentOptions::Level(CommitmentLevel::Finalized),
+        CommitmentOptions::None,
     ]
 }
 
@@ -166,7 +184,12 @@ pub async fn generate_config() -> anyhow::Result<()> {
         let rpc_url: String = prompt_data("Enter RPC URL:")?;
 
         let commitment_level =
-            Select::new("Select commitment level:", get_commitment_levels()).prompt()?;
+            match Select::new("Select commitment level:", get_commitment_levels()).prompt()? {
+                CommitmentOptions::Level(level) => level,
+                CommitmentOptions::None => {
+                    return Ok(());
+                }
+            };
 
         let default_keypair_path = ScillaConfig::default().keypair_path;
 
@@ -250,8 +273,14 @@ async fn edit_config() -> anyhow::Result<()> {
             config.rpc_url = prompt_data("Enter RPC URL:")?;
         }
         ConfigField::CommitmentLevel => {
-            config.commitment_level =
-                Select::new("Select commitment level:", get_commitment_levels()).prompt()?;
+            match Select::new("Select Commitment Level", get_commitment_levels()).prompt()? {
+                CommitmentOptions::Level(level) => {
+                    config.commitment_level = level;
+                }
+                CommitmentOptions::None => {
+                    return Ok(());
+                }
+            };
         }
         ConfigField::KeypairPath => {
             let default_keypair_path = ScillaConfig::default().keypair_path;
